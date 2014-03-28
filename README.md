@@ -4,6 +4,7 @@
 This a Matlab code which try to get the attitude and position of the phone. There are two versions here. 
 
 * simu_trj.m uses the attitude and accleration API of windows phone
+* simu_cylic\_trj.m uses the attitude and accleration API of windows phone, and the motion should be cyclic to use zeroPhaseFilter
 * simu_trj\_ahrs.m uses the AHRS algorithm and gravity instead
 
 ##results

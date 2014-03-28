@@ -43,7 +43,7 @@ zMean = -0.011079017214859;
 
 %% get imu data
 %data = getIMUdata('./imu_newdata_translation05_to_north.dat');
-data = getIMUdata('./imu_newdata_rotate01.dat');
+data = getIMUdata('./newdata_boya02.dat');
 
 quatation_raw = data(:,1:4);  % 4 col
 acc_raw = data(:,5:7);
@@ -54,6 +54,7 @@ time_raw = data(:,14);
 sampleNum = length(time_raw) ;  
 sampleTime = sum(diff(time_raw))/sampleNum;
 
+samplePeriod = 1/50.0;
 
 %% calibrate the accelerometer
 acc = acc_raw;
@@ -137,7 +138,7 @@ legend('X', 'Y', 'Z');
 linVel = zeros(size(linAcc));
 
 for i = 2:length(linAcc)
-    samplePeriod = time_raw(i)-time_raw(i-1);
+    %samplePeriod = time_raw(i)-time_raw(i-1);
     %samplePeriod_sum  = samplePeriod_sum+ samplePeriod ;
     if useVelocityVerlet
         if useDecayingModel
@@ -190,10 +191,30 @@ if useZeroRecorrect
 end
 
 
+%% High-pass filter linear velocity to remove drift
+
+order = 1;
+filtCutOff = 0.1;
+[b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
+linVelHP = filtfilt(b, a, linVel);
+
+% Plot
+figure('Number', 'off', 'Name', 'High-pass filtered Linear Velocity');
+hold on;
+plot(linVelHP(:,1), 'r');
+plot(linVelHP(:,2), 'g');
+plot(linVelHP(:,3), 'b');
+xlabel('sample');
+ylabel('g');
+title('High-pass filtered linear velocity');
+legend('X', 'Y', 'Z');
+
 
 
 %% Calculate linear position (integrate velocity)
-linVelHP = linVel;
+%linVelHP = linVel;
+
+
 linPos = zeros(size(linVelHP));
 
 for i = 2:length(linVelHP)
@@ -220,9 +241,26 @@ title('Linear position');
 legend('X', 'Y', 'Z');
 
 
+%% High-pass filter linear position to remove drift
 
+order = 1;
+filtCutOff = 0.1;
+[b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
+linPosHP = filtfilt(b, a, linPos);
 
-linPosHP = linPos;
+% Plot
+figure('Number', 'off', 'Name', 'High-pass filtered Linear Position');
+hold on;
+plot(linPosHP(:,1), 'r');
+plot(linPosHP(:,2), 'g');
+plot(linPosHP(:,3), 'b');
+xlabel('sample');
+ylabel('g');
+title('High-pass filtered linear position');
+legend('X', 'Y', 'Z');
+    
+
+%linPosHP = linPos;
 
 %% Play animation
 
