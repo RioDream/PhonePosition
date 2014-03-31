@@ -43,7 +43,7 @@ zMean = -0.011079017214859;
 
 %% get imu data
 %data = getIMUdata('./imu_newdata_translation05_to_north.dat');
-data = getIMUdata('./newdata_boya02.dat');
+data = getIMUdata('./newdata_boya04.dat');
 
 quatation_raw = data(:,1:4);  % 4 col
 acc_raw = data(:,5:7);
