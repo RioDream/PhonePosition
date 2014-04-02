@@ -35,7 +35,7 @@ decayingLamda = 1.0;
 useZeroRecorrect = 1;
 
 %the mean of acceleration of the phone from API
-useManualCalibrate = 1;
+useManualCalibrate = 0;
 xMean = -0.001405488948695;
 yMean = -0.004510544296988;
 zMean = -0.011079017214859;
@@ -55,6 +55,18 @@ sampleNum = length(time_raw) ;
 sampleTime = sum(diff(time_raw))/sampleNum;
 
 samplePeriod = 1/50.0;
+
+%% test for c++
+acc_raw(:,1) = 0.1;
+acc_raw(:,2) = 0;
+acc_raw(:,3) = 0;
+
+quatation_raw(:,1) = 0.2209;
+quatation_raw(:,2) = 0.0576;
+quatation_raw(:,3) = 0.0245;
+quatation_raw(:,4) = 0.9733;
+
+
 
 %% calibrate the accelerometer
 acc = acc_raw;
@@ -196,6 +208,7 @@ end
 order = 1;
 filtCutOff = 0.1;
 [b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
+y=filter(b,a,linVel);
 linVelHP = filtfilt(b, a, linVel);
 
 % Plot
@@ -267,7 +280,7 @@ legend('X', 'Y', 'Z');
 
 %linPosHP = zeros(size(linPosHP));
 
-SamplePlotFreq = 8;
+SamplePlotFreq = 4;
 
 
 SixDOFanimation(linPosHP, R, ...
