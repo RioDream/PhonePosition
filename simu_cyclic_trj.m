@@ -2,11 +2,11 @@
 
 
 % Intro: 
-% This is very hard tjo get position from IMU, because the IMU is only able to provide a direct measurement of acceleration (from the accelerometer) and the position must be derived from this through ¡®double integration¡¯; the accelerometer is first integrated to yield a velocity and then again to yield the position. 
+% This is very hard tjo get position from IMU, because the IMU is only able to provide a direct measurement of acceleration (from the accelerometer) and the position must be derived from this through ï¿½ï¿½double integrationï¿½ï¿½; the accelerometer is first integrated to yield a velocity and then again to yield the position. 
 % This process is called 'dead reckoning'.  The double integrate means that even the smallest measurement errors result in an exponentially increasing error in the position.
 
 % Steps
-% 1. read IMU data £¬ including the attitude and the acceleration in the
+% 1. read IMU data ï¿½ï¿½ including the attitude and the acceleration in the
 % phone frame 
 % 2. get the acceleration in world frame 
 % 3. double integrate
@@ -57,6 +57,7 @@ sampleTime = sum(diff(time_raw))/sampleNum;
 samplePeriod = 1/50.0;
 
 %% test for c++
+%{
 acc_raw(:,1) = 0.1;
 acc_raw(:,2) = 0;
 acc_raw(:,3) = 0;
@@ -65,7 +66,7 @@ quatation_raw(:,1) = 0.2209;
 quatation_raw(:,2) = 0.0576;
 quatation_raw(:,3) = 0.0245;
 quatation_raw(:,4) = 0.9733;
-
+%}
 
 
 %% calibrate the accelerometer
@@ -187,8 +188,8 @@ if useZeroRecorrect
  
     stationary = lastZeroCount > lastZeroThresh;
     velDrift = zeros(size(linVel));
-    stationaryStart = find([0; diff(stationary)] == -1); % stationary£º1-> 0  before start to move
-    stationaryEnd = find([0; diff(stationary)] == 1); % stationary£º0-> 1 after move 
+    stationaryStart = find([0; diff(stationary)] == -1); % stationaryï¿½ï¿½1-> 0  before start to move
+    stationaryEnd = find([0; diff(stationary)] == 1); % stationaryï¿½ï¿½0-> 1 after move 
     %make every step linear
     for i = 1:numel(stationaryEnd) %traverse all stationaryEnd vector 
         % the drift per sample while stationary 
