@@ -1,4 +1,4 @@
-function linPosHP = SF_getLinPosHP(linaccs)
+function [linVelHP, linPosHP] = SF_getLinPosHP(linaccs, gVal)
     %{
     Usage:
         得到linPosHP,  也就是经过高通滤波的pos信息
@@ -28,13 +28,64 @@ function linPosHP = SF_getLinPosHP(linaccs)
     %% 2. 利用linaccs 积分得到在世界坐标系中的 linVel
 
     linAcc = linaccs;
+    if PLOT
+        % Plot
+        figure('Number', 'off', 'Name', 'linAcc');
+        hold on;
+        plot(linAcc(:,1), 'r');
+        plot(linAcc(:,2), 'g');
+        plot(linAcc(:,3), 'b');
+        xlabel('sample');
+        ylabel('g');
+        title('linAcc');
+        legend('X', 'Y', 'Z');
+    end
+    order = 1;
+    filtCutOff = 0.1;
+    [b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'low');
+    linAccLP = filtfilt(b, a, linAcc);
+    [b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
+    linAccLP = filtfilt(b, a, linAccLP);
+    
+    if 0
+        % Plot
+        figure('Number', 'off', 'Name', 'linAccLP');
+        hold on;
+        plot(linAccLP(:,1), 'r');
+        plot(linAccLP(:,2), 'g');
+        plot(linAccLP(:,3), 'b');
+        xlabel('sample');
+        ylabel('g');
+        title('linAccLP');
+        legend('X', 'Y', 'Z');
+    end
+    
+    %=====================
+        
+    
+    
     linVel = zeros(size(linAcc)); %初始速度是0
     for i = 2:length(linAcc)
         linVel(i,:) = linVel(i-1,:) + linAcc(i,:) * samplePeriod;
     end
+    
+    
 
     %% 3. 对linVel 进行滤波, 得到 linVelHp
 
+    if 0
+        % Plot
+        figure('Number', 'off', 'Name', 'High-pass filtered Linear Velocity');
+        hold on;
+        plot(linVel(:,1), 'r');
+        plot(linVel(:,2), 'g');
+        plot(linVel(:,3), 'b');
+        xlabel('sample');
+        ylabel('g');
+        title('linear velocity');
+        legend('X', 'Y', 'Z');
+    end
+    
     order = 1;
     filtCutOff = 0.1;
     [b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
@@ -64,6 +115,19 @@ function linPosHP = SF_getLinPosHP(linaccs)
 
     %% 5. 对 linPos 进行滤波，得到 linPosHP
 
+    if 0
+        % Plot
+        figure('Number', 'off', 'Name', 'High-pass filtered Linear Position');
+        hold on;
+        plot(linPos(:,1), 'r');
+        plot(linPos(:,2), 'g');
+        plot(linPos(:,3), 'b');
+        xlabel('sample');
+        ylabel('g');
+        title('linear position');
+        legend('X', 'Y', 'Z');
+    end
+    
     order = 1;
     filtCutOff = 0.1;
     [b, a] = butter(order, (2*filtCutOff)/(1/samplePeriod), 'high');
@@ -85,7 +149,7 @@ function linPosHP = SF_getLinPosHP(linaccs)
     %% Play animation
 
     %单位转换成 m
-    linPosHP = 9.8 * linPosHP;
+    linPosHP = gVal * linPosHP;
 
     %Use fake rotation
     R = zeros(3,3,length(linPosHP));

@@ -6,5 +6,7 @@ Usage:
 
     diffs = abs(values - target);
     nearest_value_idx = find(diffs == min(diffs) );
-    assert(length(nearest_value_idx)==1);
+    if length(nearest_value_idx)~=1
+        nearest_value_idx = nearest_value_idx(1);
+    end
 end

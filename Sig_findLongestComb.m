@@ -1,4 +1,4 @@
-function max_tooth_zero_pts_time = Sig_findLongestComb(zero_pts_time, period)
+function max_tooth_zero_pts_time = Sig_findLongestComb(zero_pts_time, period, threshold)
 %{
 Usage:
     zero_pts：是一堆零点
@@ -28,7 +28,7 @@ for i=1:nof_zeros %遍历选择其中一个作为齿， 向两边扩散
         tooth = center - j*period;
         candidate_idx = Sig_findNearestValue(zero_pts_time, tooth);
         distance = tooth_distance(zero_pts_time(candidate_idx), tooth);
-        if distance>0.2*period
+        if distance>threshold*period
             break;
         end
         cost = cost + distance;
@@ -42,7 +42,7 @@ for i=1:nof_zeros %遍历选择其中一个作为齿， 向两边扩散
         tooth = center + j*period;
         candidate_idx = Sig_findNearestValue(zero_pts_time, tooth);
         distance = tooth_distance(zero_pts_time(candidate_idx), tooth);
-        if distance>0.2*period
+        if distance>threshold*period
             break;
         end
         cost = cost + distance;
