@@ -1,4 +1,4 @@
-function [X, P] = SKF_UPDATE_doEkfUpdate(X, P, features, ms, K, q_I2C, im_sigma)
+function [X, P] = SKF_UPDATE_doEkfUpdate(X, P, features, ms, K, q_I2C, R_S2G, p_GinS, im_sigma)
 %{
 Usage:
     使用推导的观测模型进行update
@@ -13,18 +13,14 @@ nof_chisquare_fail = 0;
 r = [];
 H = [];
 for i=1:nof_corres
-    p_finG_i = features(i,:).';
+    p_finS_i = features(i,:).';
     zi = ms(i, : ).';
-    [H_fi, zi_] = IN_computeJacobianOfOneFeature(p_finG_i, X, K, q_I2C);
+    [H_fi, zi_] = IN_computeJacobianOfOneFeature(p_finS_i, X, K, q_I2C, R_S2G, p_GinS);
     ri = zi-zi_;
     
     isInlier = SKF_chiSquareTest(ri, H_fi, P, im_sigma);
     if ~isInlier
         nof_chisquare_fail = nof_chisquare_fail + 1;
-        
-        IN_computeJacobianOfOneFeature(p_finG_i, X, K, q_I2C);
-        SKF_chiSquareTest(ri, H_fi, P, im_sigma);
-        
         continue;
     end
     
@@ -58,7 +54,7 @@ end
 
 
 
-function [J, z_] = IN_computeJacobianOfOneFeature(p_finG, X, K, q_I2C) 
+function [J, z_] = IN_computeJacobianOfOneFeature(p_finS, X, K, q_I2C, R_S2G, p_GinS) 
 %{
 Usage:
     计算一个feature的观测对于 \tilde{X} 的Jabocain 
@@ -68,18 +64,19 @@ Usage:
 %}
 
 
- [q_G2I, p_IinG, v_IinG, bias_G, bias_A ] = SKF_X_getIMUpart(X);
- [p_IinC, lambda] = SKF_getOtherPart(X);
- 
+     [q_G2I, p_IinG, v_IinG, bias_G, bias_A ] = SKF_X_getIMUpart(X);
+     [p_IinC, lambda] = SKF_getOtherPart(X);
+
     R_I2C = Quater_2Mat(q_I2C);
     R_G2I = Quater_2Mat(q_G2I);
 
     %% feature转换到camera坐标系下
+    p_finG = lambda*R_S2G*(p_finS - p_GinS);
     p_finC = R_I2C * R_G2I * (p_finG - p_IinG) + p_IinC;
- 
+
     %% 计算 \hat{z}
     z_ = IN_getEstimateMeasure(p_finC, K);
- 
+
  
     %% 计算Jacobian
     Jh =  IN_getJh(p_finC, K);
@@ -88,7 +85,9 @@ Usage:
     %J_theta = R_I2C * skew_symmetric(R_G2I * (p_finG-p_IinG));
     J_p = -R_I2C * R_G2I;
     J_pic = eye(3); 
-    J_f = [J_theta, J_p, zeros(3,3), zeros(3,3), zeros(3,3), J_pic];
+    J_lambda = R_I2C * R_G2I * R_S2G *(p_finS - p_GinS);
+    
+    J_f = [J_theta, J_p, zeros(3,3), zeros(3,3), zeros(3,3), J_pic, J_lambda];
 
     J = Jh * J_f;
  
@@ -128,42 +127,37 @@ end
 
 function X = IN_correctX(X, deltaX)
 
+    assert(length(deltaX)==19);
 
-    assert(length(deltaX)==18);
+    [q, p, v, bg, ba] = SKF_X_getIMUpart(X);
+    [pic , lambda] = SKF_getOtherPart(X);
 
+    theta = deltaX(1:3);
+    delta_p = deltaX(4:6);
+    delta_v = deltaX(7:9);
+    delta_bg = deltaX(10:12);
+    delta_ba = deltaX(13:15);
+    delta_pic = deltaX(16:18);
+    delta_lambda = deltaX(19);
 
-[q, p, v, bg, ba] = SKF_X_getIMUpart(X);
-[pic , lambda] = SKF_getOtherPart(X);
+    %convert theta to deltaQ
+    bq = 0.5*theta;
+    if norm(bq)<1.0
+        deltaQ =  [bq; sqrt(1.0 - bq.'*bq)] ; %!! bq.'*bq 不是norm(bq)，而是其平方
+    else
+        deltaQ = [bq; 1];
+        deltaQ = deltaQ/norm(deltaQ);
+    end
+    q = Quater_multi(q, deltaQ);
+    p = p + delta_p;
+    v = v + delta_v;
+    bg = bg + delta_bg;
+    ba = ba + delta_ba;
+    pic = pic + delta_pic;
+    lambda = lambda + delta_lambda;
 
-theta = deltaX(1:3);
-delta_p = deltaX(4:6);
-delta_v = deltaX(7:9);
-delta_bg = deltaX(10:12);
-delta_ba = deltaX(13:15);
-delta_pic = deltaX(16:18);
-
-
-    delta_lambda = 0;
-
-
-%convert theta to deltaQ
-bq = 0.5*theta;
-if norm(bq)<1.0
-    deltaQ =  [bq; sqrt(1.0 - bq.'*bq)] ; %!! bq.'*bq 不是norm(bq)，而是其平方
-else
-    deltaQ = [bq; 1];
-    deltaQ = deltaQ/norm(deltaQ);
-end
-q = Quater_multi(q, deltaQ);
-p = p + delta_p;
-v = v + delta_v;
-bg = bg + delta_bg;
-ba = ba + delta_ba;
-pic = pic + delta_pic;
-lambda = lambda + delta_lambda;
-
-X = SKF_X_setIMUpart(X, q,  p, v, bg, ba);
-X = SKF_setOtherPart(X, pic, lambda);
+    X = SKF_X_setIMUpart(X, q,  p, v, bg, ba);
+    X = SKF_setOtherPart(X, pic, lambda);
 end
 
 

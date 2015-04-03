@@ -1,4 +1,4 @@
-function covs = ANA_extractCovFromP_And_append(covs, P, NO_LAMBDA)
+function covs = ANA_extractCovFromP_And_append(covs, P)
 %{
     Usage:
         将协方差矩阵中的 state vector中的各个状态的协方差提取出来(主对角线上的元素)
@@ -32,12 +32,8 @@ function covs = ANA_extractCovFromP_And_append(covs, P, NO_LAMBDA)
     cov_picx = P(16,16);
     cov_picy = P(17,17);
     cov_picz = P(18,18);
-    
-if NO_LAMBDA
-    ;
-else
     cov_lambda = P(19,19);
-end
+
     
     covs(1, end) = cov_roll;
     covs(2, end) = cov_yaw;
@@ -57,12 +53,7 @@ end
     covs(16, end) = cov_picx;
     covs(17, end) = cov_picy;
     covs(18, end) = cov_picz;
-    
-if NO_LAMBDA
-    ;
-else
     covs(19, end) = cov_lambda;
-end
    
 
 end

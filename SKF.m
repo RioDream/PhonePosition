@@ -30,7 +30,6 @@ ANALYSE_ERROR = 1;
 USE_FIRST = 1;
 DEBUG_ONLY_IMU = 0;
 EPS = 0.00000000001;
-NO_LAMBDA = 1;
 USE_ITER_UPDATE = 0;
 
 %load data
@@ -64,7 +63,7 @@ init_v = [0, 0, 0 ].';
 init_bg = [0 0 0].';
 init_ba = [0 0 0].';
 init_pic = [0.00, -0.001, 0.001].';
-init_lambda = 1.6;
+init_lambda = 1.55;
 
 
 init_q_cov = 0.1;
@@ -73,9 +72,9 @@ init_v_cov = 0.01;
 init_bg_cov = 0.01;
 init_ba_cov = 0.01;
 init_pic_cov = 0.01;
-init_lambda_cov = 0.3;
+init_lambda_cov = 0.1;
 
-ratio = 3.0;
+ratio = 2.0;
 sigma_gc = 0.001 * ratio;
 sigma_ac = 0.008 * 1.5;
 sigma_wgc = 1.00000000000000e-04;
@@ -92,15 +91,12 @@ Nc(13:15, 13:15) = sigma_wac^2*eye(3);
 
 %% 初始化
 %初始化状态
-X = [init_q; init_p; init_v; init_bg; init_ba; init_pic];
+X = [init_q; init_p; init_v; init_bg; init_ba; init_pic; init_lambda];
 
 
 %初始化协方差
-if NO_LAMBDA 
-    P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_pic_cov*eye(3));
-else
-    P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_pic_cov*eye(3), init_lambda_cov);
-end
+P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_pic_cov*eye(3), init_lambda_cov);
+
 
 
 
@@ -156,11 +152,12 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         %[t_q_G2I, t_p,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
         %firstEstimated_PIinG_arr = FE_appendPosePosition(firstEstimated_PIinG_arr, t_p);
         
-        [features, ms, dess, gt_pfinGs] = Proc_getCorrespondences(raw_room, frameInfo, raw_room);
+        %[features, ms, dess, gt_pfinGs] = Proc_getCorrespondences(raw_room, frameInfo, raw_room);
+        [features, ms, dess, gt_pfinGs] = Proc_getCorrespondences(room, frameInfo, raw_room);
 
         
         %SKF_checkState(X, gt_qs(:,IMU_idx-1) ,gt_ps(:,IMU_idx-1))
-        SKF_check_corres(features, ms, dess, raw_room, frameInfo, gt_qs(:,IMU_idx-1) ,gt_ps(:,IMU_idx-1), K);
+        %SKF_check_corres(features, ms, dess, raw_room, frameInfo, gt_qs(:,IMU_idx-1) ,gt_ps(:,IMU_idx-1), K);
         
     
         disp(['-feature number ', num2str(size(ms,1))]);
@@ -171,7 +168,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         else
             %X(1:4) = gt_qs(:,IMU_idx-1) ;
             %X(5:7) = gt_ps(:,IMU_idx-1) ;
-            [X, P] = SKF_UPDATE_doEkfUpdate(X, P, features, ms, K, q_I2C, im_sigma);
+            [X, P] = SKF_UPDATE_doEkfUpdate(X, P, features, ms, K, q_I2C, R_S2G, p_GinS, im_sigma);
         end
         
        
@@ -182,7 +179,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
 
         if ANALYSE_ERROR
             %记录误差和误差协方差
-            covs = ANA_extractCovFromP_And_append(covs, P, NO_LAMBDA);
+            covs = ANA_extractCovFromP_And_append(covs, P);
             idx = IMU_idx - 1; %idx其实是从2开始
             gt_q = [gt_qs(1, idx), gt_qs(2, idx), gt_qs(3, idx), gt_qs(4, idx)];
             gt_p = [gt_ps(1, idx), gt_ps(2, idx) ,gt_ps(3, idx)];
