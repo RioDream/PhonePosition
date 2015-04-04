@@ -59,10 +59,9 @@ init_q = [0 0 0 1].';
 %init_p = [0.3 0 0].';
 init_p = [0 0 0].';
 %init_v = [0, 0.942477796076938, 0.450000000000000].';
-init_v = [0, 0, 0 ].';
+init_v = [0, 0, 0].';
 init_bg = [0 0 0].';
 init_ba = [0 0 0].';
-init_pic = [0.00, -0.001, 0.001].';
 init_lambda = 1.55;
 
 
@@ -72,14 +71,14 @@ init_v_cov = 0.01;
 init_bg_cov = 0.01;
 init_ba_cov = 0.01;
 init_pic_cov = 0.01;
-init_lambda_cov = 0.1;
+init_lambda_cov = 0.03;
 
-ratio = 2.0;
+ratio = 3.0;
 sigma_gc = 0.001 * ratio;
-sigma_ac = 0.008 * 1.5;
+sigma_ac = 0.008 * 1;
 sigma_wgc = 1.00000000000000e-04;
 sigma_wac = 1.00000000000000e-04;
-im_sigma = 1;
+im_sigma = 1.1;
 
 
 Nc = zeros(15,15);
@@ -91,13 +90,10 @@ Nc(13:15, 13:15) = sigma_wac^2*eye(3);
 
 %% 初始化
 %初始化状态
-X = [init_q; init_p; init_v; init_bg; init_ba; init_pic; init_lambda];
-
+X = [init_q; init_p; init_v; init_bg; init_ba; init_lambda];
 
 %初始化协方差
-P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_pic_cov*eye(3), init_lambda_cov);
-
-
+P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_lambda_cov);
 
 
 %开始前的准备

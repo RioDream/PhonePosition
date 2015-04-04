@@ -29,10 +29,10 @@ function covs = ANA_extractCovFromP_And_append(covs, P)
     cov_bax = P(13,13);
     cov_bay = P(14,14);
     cov_baz = P(15,15);
-    cov_picx = P(16,16);
-    cov_picy = P(17,17);
-    cov_picz = P(18,18);
-    cov_lambda = P(19,19);
+    %cov_picx = P(16,16);
+    %cov_picy = P(17,17);
+    %cov_picz = P(18,18);
+    cov_lambda = P(16,16);
 
     
     covs(1, end) = cov_roll;
@@ -50,10 +50,10 @@ function covs = ANA_extractCovFromP_And_append(covs, P)
     covs(13, end) = cov_bax;
     covs(14, end) = cov_bay;
     covs(15, end) = cov_baz;
-    covs(16, end) = cov_picx;
-    covs(17, end) = cov_picy;
-    covs(18, end) = cov_picz;
-    covs(19, end) = cov_lambda;
+    %covs(16, end) = cov_picx;
+    %covs(17, end) = cov_picy;
+    %covs(18, end) = cov_picz;
+    covs(16, end) = cov_lambda;
    
 
 end

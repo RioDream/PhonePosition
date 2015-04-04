@@ -1,4 +1,4 @@
 function [pic , lambda] = SKF_getOtherPart(X)
-pic = X(17:19);
-lambda = X(20);
+pic = [0,0,0]'; 
+lambda = X(17);
 end

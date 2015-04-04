@@ -84,10 +84,10 @@ Usage:
     J_theta = R_I2C * R_G2I * skew_symmetric(p_finG-p_IinG);
     %J_theta = R_I2C * skew_symmetric(R_G2I * (p_finG-p_IinG));
     J_p = -R_I2C * R_G2I;
-    J_pic = eye(3); 
+    %J_pic = eye(3); 
     J_lambda = R_I2C * R_G2I * R_S2G *(p_finS - p_GinS);
     
-    J_f = [J_theta, J_p, zeros(3,3), zeros(3,3), zeros(3,3), J_pic, J_lambda];
+    J_f = [J_theta, J_p, zeros(3,3), zeros(3,3), zeros(3,3), J_lambda];
 
     J = Jh * J_f;
  
@@ -127,7 +127,7 @@ end
 
 function X = IN_correctX(X, deltaX)
 
-    assert(length(deltaX)==19);
+    assert(length(deltaX)==16);
 
     [q, p, v, bg, ba] = SKF_X_getIMUpart(X);
     [pic , lambda] = SKF_getOtherPart(X);
@@ -137,8 +137,7 @@ function X = IN_correctX(X, deltaX)
     delta_v = deltaX(7:9);
     delta_bg = deltaX(10:12);
     delta_ba = deltaX(13:15);
-    delta_pic = deltaX(16:18);
-    delta_lambda = deltaX(19);
+    delta_lambda = deltaX(16);
 
     %convert theta to deltaQ
     bq = 0.5*theta;
@@ -153,7 +152,6 @@ function X = IN_correctX(X, deltaX)
     v = v + delta_v;
     bg = bg + delta_bg;
     ba = ba + delta_ba;
-    pic = pic + delta_pic;
     lambda = lambda + delta_lambda;
 
     X = SKF_X_setIMUpart(X, q,  p, v, bg, ba);
