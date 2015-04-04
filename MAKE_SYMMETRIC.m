@@ -10,7 +10,7 @@ function smat = MAKE_SYMMETRIC(mat)
 
 USE_SVD_METHOD = 0;
 
-Debug_assertNearlyEqual(mat, transpose(mat), 'RioError: 不是接近对称的');
+assert(norm(mat- transpose(mat))<0.001, 'RioError: 不是接近对称的');
 
 if USE_SVD_METHOD
     

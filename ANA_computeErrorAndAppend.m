@@ -39,7 +39,10 @@ errors(12, end) = gt_bg(3) - bias_G(3);
 errors(13, end) = gt_ba(1) - bias_A(1);
 errors(14, end) = gt_ba(2) - bias_A(2);
 errors(15, end) = gt_ba(3) - bias_A(3);
-errors(16, end) = 1.5 - lambda;
+errors(16, end) = 0 - p_IinC(1);
+errors(17, end) = 0 - p_IinC(2);
+errors(18, end) = 0 - p_IinC(3);
+errors(19, end) = 1.5 - lambda;
 
 
 end

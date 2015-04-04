@@ -151,7 +151,7 @@ title('bias_A error cov');
 legend('X std', 'Y std', 'Z std', 'X error', 'Y error', 'Z error');
 
 
-%{
+
 %Calibrate
 figure('Number', 'off');
 hold on;
@@ -178,17 +178,17 @@ title('P_IinC error cov');
 legend('X std', 'Y std', 'Z std', 'X error', 'Y error', 'Z error');
 
 title('p_IinC error cov');
-%}
+
 
 %% lambda 
 figure('Number', 'off');
 hold on;
-plot(stds(16,:), 'g');
+plot(stds(19,:), 'g');
 
-plot(errors(16, :), 'b.');
+plot(errors(19, :), 'b.');
 
-plot(3*stds(16,:), 'b:');
-plot(-3*stds(16,:), 'b:');
+plot(3*stds(19,:), 'b:');
+plot(-3*stds(19,:), 'b:');
 
 xlabel('IMU frame');
 ylabel('cov');
