@@ -5,6 +5,20 @@ Usage:
     后面四个参数是系统参数
 %}
 
+%debug
+    %初始化参数
+    init_q = Quater_conj(q_I2C); %R_C2I
+    init_p = [0 0 0].'; % == init_pic
+    init_v = [0, 0, 0].';
+    init_bg = [0 0 0].';
+    init_ba = [0 0 0].';
+    init_pic = [0, 0, 0].';
+    init_lambda = (0.187/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
+    init_X = [init_q; init_p; init_v; init_bg; init_ba; init_pic;init_lambda];
+    X - init_X
+mod_X = X;
+mod_X(1:4) = [1;0;0;0];
+
 assert(size(features,1)==size(ms, 1));
 
 nof_corres = size(features,1);
@@ -19,29 +33,33 @@ for i=1:nof_corres
     ri = zi-zi_;
     
     isInlier = SKF_chiSquareTest(ri, H_fi, P, im_sigma);
-    if ~isInlier
-        nof_chisquare_fail = nof_chisquare_fail + 1;
-        continue;
-    end
+    %if ~isInlier
+    %    nof_chisquare_fail = nof_chisquare_fail + 1;
+    %    continue;
+    %end
     
     %stack
     r = [r; ri];
     H = [H; H_fi];
 end
 
+%disp(X);
 disp( ['nof_chisquare_fail:', num2str(nof_chisquare_fail) ] );
 
 n = size(H,1);
 R = eye(n)*im_sigma^2;
 
-assert(n~=0);
-% r = Hx + n
+if  n==0
+    assert(1==2);
+end
+% r = Hx + noise
 
 S = H*P*transpose(H) + R;
 S = MAKE_SYMMETRIC(S);
 
 KK = P * transpose(H) / S;
 deltaX = KK*r;
+disp(deltaX);
 X = IN_correctX(X, deltaX);
 
 sof_dx = size(P,1);

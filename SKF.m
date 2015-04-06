@@ -25,69 +25,144 @@ clear;
 close all;
 PLOT_ENV_configFigure;
 
-PLOT_ANIMATION = 0;
-ANALYSE_ERROR = 1;
-USE_FIRST = 1;
+
+
+PLOT_SCALE = 1;
+PLOT_ANIMATION = 1;
+PLOT_PATTERN = 1;
+if PLOT_PATTERN
+    scale = 1;
+    fill3(scale*[-1 1 1 -1],scale*[-0.95 -0.95 0.95 0.95],[0 0 0 0],'c');
+    s_ = 0.5;
+    quiver3(0, 0, 0, s_, 0, 0,  'r', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
+    quiver3(0, 0, 0, 0, s_, 0,  'g', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
+    quiver3(0, 0, 0, 0, 0, s_,  'b', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
+end
+
+ANALYSE_ERROR = 0;
+USE_FIRST = 0;
 DEBUG_ONLY_IMU = 0;
 EPS = 0.00000000001;
 USE_ITER_UPDATE = 0;
+USE_REAL_DATA = 1;
+RECORD_VALUES = 1;
 
-%load data
-load('../MSCKF/data_synthesis/IMU.mat');  % synthesis IMU
-load('../MSCKF/data_synthesis/room.mat')
-load('../MSCKF/data_synthesis/frames.mat')
-load('../MSCKF/data_synthesis/ground_truth.mat'); 
+if USE_REAL_DATA
+    infoDir = '/Users/riodream/workspace/PhonePosition/SKF_data/2/';
+    [R_S2C, p_SinC] = Utils_loadInitRandT(infoDir);
+    
+    [timestamps, linaccs] = Utils_loadIMUdata(infoDir);
+    [linVelHP, linPosHP] = SF_getLinPosHP(linaccs, 9.81);
+    
+    %{
+    IMUdata = Utils_loadIMUdata_SKF(infoDir);
+    frames = Utils_loadFrameData(infoDir);
+    room = Utils_loadRoom(infoDir);
+    save([infoDir,'IMUdata.mat'], 'IMUdata');
+    save([infoDir,'frames.mat'], 'frames');
+    save([infoDir,'room.mat'], 'room');
+    %}
+    load([infoDir, 'IMUdata.mat']);
+    load([infoDir, 'frames.mat']);
+    load([infoDir, 'room.mat']);
+    raw_room = room;
+    
+    
+    %系统参数
+    %开始得到的R和T分别是，R*x+t,  R_S2C, p_SinC(使用S的单位)， 需要转换得到 R_S2G, p_GinS
+    R_S2G = R_S2C;
+    p_GinS = -transpose(R_S2C) * p_SinC;
+    q_I2C = [-1 0 0 0].';
+    R_I2C = Quater_2Mat(q_I2C);
+    %g_inG = R_I2C * [-0.015028, -0.639265, -0.768840].'; %1
+    g_inG = R_I2C * [0.010955,-0.781036,-0.624389].'; %2
+    K = [582.14339,         0,        245.61315;
+                0,          587.28613 , 349.09467;
+                0 ,             0 ,              1 ];
+    
+    %初始化参数
+    init_q = Quater_conj(q_I2C); %R_C2I
+    init_p = [0 0 0].'; % == init_pic
+    init_v = [0, 0, 0].';
+    init_bg = [0 0 0].';
+    init_ba = [0 0 0].';
+    init_pic = [0, 0, 0].';
+    %1
+    init_lambda = (0.135/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
+    %2
+    init_lambda = (0.187/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
 
-%将room的点的坐标从 {G}转换到 {S}
-raw_room= room;
-room(:,3) = room(:,3) + 0.75;
-room(:,1:3) = 1/1.5 * room(:,1:3); %注意别把第四列的描述子搞进去
-frames(1) = [];
+    init_q_cov = 0.001;
+    init_p_cov = 0.005;
+    init_v_cov = 0.01;
+    init_bg_cov = 0.001;
+    init_ba_cov = 0.001;
+    init_pic_cov = 0.005;
+    init_lambda_cov = 0.0001;
+
+    ratio = 1.0;
+    sigma_gc = 0.001;
+    sigma_ac = 0.008 * ratio;
+    sigma_wgc = 0.0001;
+    sigma_wac = 0.0001;
+    im_sigma = 1.5;
+    
+else
+    %load data
+    load('../MSCKF/data_synthesis/IMU.mat');  % synthesis IMU
+    load('../MSCKF/data_synthesis/room.mat')
+    load('../MSCKF/data_synthesis/frames.mat')
+    load('../MSCKF/data_synthesis/ground_truth.mat'); 
+
+    %将room的点的坐标从 {G}转换到 {S}
+    raw_room= room;
+    room(:,3) = room(:,3) + 0.75;
+    room(:,1:3) = 1/1.5 * room(:,1:3); %注意别把第四列的描述子搞进去
+    frames(1) = [];
 
 
-%系统参数
-q_I2C = [-1 0 0 0].';
-g_inG = [0 0 -1].';
-R_S2G = eye(3);
-p_GinS = [0 0 0.5].';
-K = [584.4537400000000               0   232.8303600000000
-                   0   585.9839900000000   328.5745800000000
-                   0                   0                1];
+    %系统参数
+    q_I2C = [-1 0 0 0].';
+    g_inG = [0 0 -1].';
+    R_S2G = eye(3);
+    p_GinS = [0 0 0.5].';
+    K = [584.4537400000000               0   232.8303600000000
+                       0   585.9839900000000   328.5745800000000
+                       0                   0                1];
 
-%初始化参数
-init_q = [0 0 0 1].';
-%init_p = [0.3 0 0].';
-init_p = [0 0 0].';
-%init_v = [0, 0.942477796076938, 0.450000000000000].';
-init_v = [0, 0, 0].';
-init_bg = [0 0 0].';
-init_ba = [0 0 0].';
-init_pic = [0.001, 0.001, 0].';
-init_lambda = 1.55;
-
-
-init_q_cov = 0.1;
-init_p_cov = 0.001;
-init_v_cov = 0.01;
-init_bg_cov = 0.01;
-init_ba_cov = 0.01;
-init_pic_cov = 0.01;
-init_lambda_cov = 0.03;
-
-ratio = 3.0;
-sigma_gc = 0.001 * ratio;
-sigma_ac = 0.008 * 1;
-sigma_wgc = 1.00000000000000e-04;
-sigma_wac = 1.00000000000000e-04;
-im_sigma = 1.1;
+    %初始化参数
+    init_q = [0 0 0 1].';
+    %init_p = [0.3 0 0].';
+    init_p = [0 0 0].';
+    %init_v = [0, 0.942477796076938, 0.450000000000000].';
+    init_v = [0, 0, 0].';
+    init_bg = [0 0 0].';
+    init_ba = [0 0 0].';
+    init_pic = [0.001, 0.001, 0].';
+    init_lambda = 1.55;
 
 
-Nc = zeros(15,15);
-Nc(1:3,   1:3) = sigma_gc^2*eye(3);
-Nc(7:9,   7:9) = sigma_ac^2*eye(3);
-Nc(10:12, 10:12) = sigma_wgc^2*eye(3);
-Nc(13:15, 13:15) = sigma_wac^2*eye(3);
+    init_q_cov = 0.1;
+    init_p_cov = 0.001;
+    init_v_cov = 0.01;
+    init_bg_cov = 0.01;
+    init_ba_cov = 0.01;
+    init_pic_cov = 0.01;
+    init_lambda_cov = 0.03;
 
+    ratio = 1.0;
+    sigma_gc = 0.001 * ratio;
+    sigma_ac = 0.008 * 1;
+    sigma_wgc = 1.00000000000000e-04;
+    sigma_wac = 1.00000000000000e-04;
+    im_sigma = 1.1;
+end
+
+    Nc = zeros(15,15);
+    Nc(1:3,   1:3) = sigma_gc^2*eye(3);
+    Nc(7:9,   7:9) = sigma_ac^2*eye(3);
+    Nc(10:12, 10:12) = sigma_wgc^2*eye(3);
+    Nc(13:15, 13:15) = sigma_wac^2*eye(3);
 
 %% 初始化
 %初始化状态
@@ -128,7 +203,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         
 
     if IMU_timestamp < frame_timestamp || Debug_isNearlyEqual(IMU_timestamp, frame_timestamp) || DEBUG_ONLY_IMU
-        disp(['propagate...', num2str(IMU_idx)]);
+        disp(['propagate...', num2str(IMU_idx),'  timestamp:', num2str(IMU_timestamp)]);
         if USE_FIRST
             [X, P] = SKF_PROP_propagate(X, P, last_firstEstimated_X, IMUInfo, last_IMUInfo, Nc, g_inG);
         else
@@ -140,6 +215,11 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         last_firstEstimated_X = X;
         IMU_idx = IMU_idx + 1;
     end
+    
+      [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
+        t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/0.0095); %
+        Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
+        
 
     if Debug_isNearlyEqual(IMU_timestamp, frame_timestamp) && ~DEBUG_ONLY_IMU 
         frameInfo = frames{frame_idx}; 
@@ -168,7 +248,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
             [X, P] = SKF_UPDATE_doEkfUpdate(X, P, features, ms, K, q_I2C, R_S2G, p_GinS, im_sigma);
         end
         
-       
+
         updateFlag = true;
         frame_idx = frame_idx + 1; 
     end
@@ -187,19 +267,27 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
             
         end
         
-        if PLOT_ANIMATION && mod(IMU_idx,1)==0
+        step = 5;
+        if PLOT_ANIMATION && mod(IMU_idx,step)==0
             PLOT_SCALE = 1;
-            [t_q_G2I, t_p,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
+            [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
             
             %pointHandle = pointHandles(1);
             %set(pointHandle , 'Xdata', t_p(1))
             %'Ydata', t_p(2), 'zdata', t_p(3));
-            Plot_scalePlot(t_p, 'ro', PLOT_SCALE);
+
+            q_S2G= Quater_mat2q(R_S2G);
+            t_q_S2I = Quater_multi(t_q_G2I, q_S2G); %参考坐标系转换到{S}
+            
+
+            t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/0.0095); %
+            
+            Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
             if updateFlag
-                Plot_scalePlot(t_p, 'r*', PLOT_SCALE);
+                Plot_scalePlot(t_p_IinS, 'g*', PLOT_SCALE);
             end
             
-            quiverHandles = Plot_drawPose_useQuiverHandles(Quater_conj(t_q_G2I), PLOT_SCALE*t_p, 0, 0, 0, [], quiverHandles);
+            quiverHandles = Plot_drawPose_useQuiverHandles(Quater_conj(t_q_S2I), PLOT_SCALE*t_p_IinS, 0, 0, 0, [], quiverHandles);
 
             updateFlag = false;
         end

@@ -115,7 +115,7 @@ function [linVelHP, linPosHP] = SF_getLinPosHP(linaccs, gVal)
 
     %% 5. 对 linPos 进行滤波，得到 linPosHP
 
-    if 0
+    if 1
         % Plot
         figure('Number', 'off', 'Name', 'High-pass filtered Linear Position');
         hold on;

@@ -37,7 +37,7 @@ function quiverHandles = Plot_drawPose_useQuiverHandles(q, p, rectangle_in_z, re
     quivZhandle = quiverHandles(3,1);
     quiverHandles(:,1)=[];
     
-    scale = 0.1; 
+    scale = 0.5; 
     set(quivXhandle, 'xdata', ox, 'ydata', oy, 'zdata', oz,'udata', scale*ux, 'vdata', scale*vx, 'wdata', scale*wx);
     set(quivYhandle, 'xdata', ox, 'ydata', oy, 'zdata', oz,'udata', scale*uy, 'vdata', scale*vy, 'wdata', scale*wy);
     set(quivZhandle, 'xdata', ox, 'ydata', oy, 'zdata', oz,'udata', scale*uz, 'vdata', scale*vz, 'wdata', scale*wz);

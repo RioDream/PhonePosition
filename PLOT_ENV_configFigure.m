@@ -36,8 +36,8 @@ end
 nof_points = 30;
 pointHandles =[];
 for i=1:nof_points
-    handl = plot3(0,0,0,'ro');
-    pointHandles = [pointHandles ,0];
+    %handl = plot3(0,0,0,'ro');
+    %pointHandles = [pointHandles ,0];
 end
 
 
