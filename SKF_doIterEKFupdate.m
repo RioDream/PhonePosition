@@ -105,9 +105,6 @@ end
 
 end %main function
 
-function K = IN_calcKalmanGain()
-end
-
 function eta = IN_calcEta(H_j, r_j, deltaX_j )
     eta = r_j + H_j * deltaX_j;
 end

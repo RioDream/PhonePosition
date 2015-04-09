@@ -42,7 +42,7 @@ errors(15, end) = gt_ba(3) - bias_A(3);
 errors(16, end) = 0 - p_IinC(1);
 errors(17, end) = 0 - p_IinC(2);
 errors(18, end) = 0 - p_IinC(3);
-errors(19, end) = 1.5 - lambda;
+errors(19, end) = 0.0095 - lambda;
 
 
 end

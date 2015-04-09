@@ -33,10 +33,10 @@ for i=1:nof_corres
     ri = zi-zi_;
     
     isInlier = SKF_chiSquareTest(ri, H_fi, P, im_sigma);
-    %if ~isInlier
-    %    nof_chisquare_fail = nof_chisquare_fail + 1;
-    %    continue;
-    %end
+    if ~isInlier
+        nof_chisquare_fail = nof_chisquare_fail + 1;
+        continue;
+    end
     
     %stack
     r = [r; ri];

@@ -33,8 +33,6 @@ R_I2G_ = transpose( Quater_2Mat(q_G2I_) );
 R_G2I_l = Quater_2Mat(q_G2I_l);
 R_I2G_l = transpose(R_G2I_l);
 
-a_inG = R_I2G_*(acc_IMU-bias_A_) + g_inG
-
 v_ = v_l + deltaT/2 * ( R_I2G_l*(acc_IMU_l-bias_A_l) + R_I2G_*(acc_IMU-bias_A_) )+ g_inG*deltaT; %这里 bias_A_ 和 bias_A_l 数值实际是一样的， 只是在概念上需要区分
 
 % 5. propagate p

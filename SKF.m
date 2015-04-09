@@ -25,21 +25,21 @@ clear;
 close all;
 PLOT_ENV_configFigure;
 
-
+MAKE_LAMBDA_ONE_SCALE = 0.019062181447503;
 
 PLOT_SCALE = 1;
 PLOT_ANIMATION = 1;
 PLOT_PATTERN = 1;
 if PLOT_PATTERN
-    scale = 1;
-    fill3(scale*[-1 1 1 -1],scale*[-0.95 -0.95 0.95 0.95],[0 0 0 0],'c');
-    s_ = 0.5;
+    scale = MAKE_LAMBDA_ONE_SCALE ;
+    fill3(scale*[0 1 1 0],scale*[0 0 0.95 0.95],[0 0 0 0],'c');
+    s_ = 0.5*scale;
     quiver3(0, 0, 0, s_, 0, 0,  'r', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
     quiver3(0, 0, 0, 0, s_, 0,  'g', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
     quiver3(0, 0, 0, 0, 0, s_,  'b', 'ShowArrowHead', 'on', 'MaxHeadSize', 0.999999, 'AutoScale', 'off');
 end
 
-ANALYSE_ERROR = 0;
+ANALYSE_ERROR = 1;
 USE_FIRST = 0;
 DEBUG_ONLY_IMU = 0;
 EPS = 0.00000000001;
@@ -51,9 +51,6 @@ if USE_REAL_DATA
     infoDir = '/Users/riodream/workspace/PhonePosition/SKF_data/2/';
     [R_S2C, p_SinC] = Utils_loadInitRandT(infoDir);
     
-    [timestamps, linaccs] = Utils_loadIMUdata(infoDir);
-    [linVelHP, linPosHP] = SF_getLinPosHP(linaccs, 9.81);
-    
     %{
     IMUdata = Utils_loadIMUdata_SKF(infoDir);
     frames = Utils_loadFrameData(infoDir);
@@ -62,9 +59,17 @@ if USE_REAL_DATA
     save([infoDir,'frames.mat'], 'frames');
     save([infoDir,'room.mat'], 'room');
     %}
+    
     load([infoDir, 'IMUdata.mat']);
     load([infoDir, 'frames.mat']);
     load([infoDir, 'room.mat']);
+    
+    IMUdata(1).rateX = 0;
+    IMUdata(1).rateY = 0;
+    IMUdata(1).rateZ = 0;
+    
+    room(:,1:3) = room(:,1:3)*MAKE_LAMBDA_ONE_SCALE ; %转换到g坐标，这样lambda为1
+    p_SinC = p_SinC*MAKE_LAMBDA_ONE_SCALE ;
     raw_room = room;
     
     
@@ -90,22 +95,23 @@ if USE_REAL_DATA
     %1
     init_lambda = (0.135/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
     %2
-    init_lambda = (0.187/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
-
+    %init_lambda = (0.187/9.81)/1; %1个单位对应 0.187m,0.135/9.81个g
+    init_lambda = 1;
+    
     init_q_cov = 0.001;
     init_p_cov = 0.005;
     init_v_cov = 0.01;
-    init_bg_cov = 0.001;
-    init_ba_cov = 0.001;
+    init_bg_cov = 0.01;
+    init_ba_cov = 0.01;
     init_pic_cov = 0.005;
     init_lambda_cov = 0.0001;
 
-    ratio = 1.0;
+    ratio = 5.0;
     sigma_gc = 0.001;
     sigma_ac = 0.008 * ratio;
     sigma_wgc = 0.0001;
     sigma_wac = 0.0001;
-    im_sigma = 1.5;
+    im_sigma = 0.5;
     
 else
     %load data
@@ -216,8 +222,8 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         IMU_idx = IMU_idx + 1;
     end
     
-      [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
-        t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/0.0095); %
+        [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
+        t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/init_lambda); %
         Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
         
 
@@ -257,13 +263,22 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         if ANALYSE_ERROR
             %记录误差和误差协方差
             covs = ANA_extractCovFromP_And_append(covs, P);
-            idx = IMU_idx - 1; %idx其实是从2开始
-            gt_q = [gt_qs(1, idx), gt_qs(2, idx), gt_qs(3, idx), gt_qs(4, idx)];
-            gt_p = [gt_ps(1, idx), gt_ps(2, idx) ,gt_ps(3, idx)];
-            gt_v = [gt_vs(1, idx), gt_vs(2, idx) ,gt_vs(3, idx)];
-            gt_bg= [gt_gyro_bias(1, idx), gt_gyro_bias(2, idx) ,gt_gyro_bias(3, idx)];
-            gt_ba = [gt_acc_bias(1, idx), gt_acc_bias(2, idx) ,gt_acc_bias(3, idx)];
+            if ~USE_REAL_DATA
+                idx = IMU_idx - 1; %idx其实是从2开始
+                gt_q = [gt_qs(1, idx), gt_qs(2, idx), gt_qs(3, idx), gt_qs(4, idx)];
+                gt_p = [gt_ps(1, idx), gt_ps(2, idx) ,gt_ps(3, idx)];
+                gt_v = [gt_vs(1, idx), gt_vs(2, idx) ,gt_vs(3, idx)];
+                gt_bg= [gt_gyro_bias(1, idx), gt_gyro_bias(2, idx) ,gt_gyro_bias(3, idx)];
+                gt_ba = [gt_acc_bias(1, idx), gt_acc_bias(2, idx) ,gt_acc_bias(3, idx)];
+            else
+                gt_q = [0 0 0 0];
+                gt_p = [0 0 0];
+                gt_v = [0 0 0];
+                gt_bg = [0 0 0];
+                gt_ba = [0 0 0];
+            end
             errors = ANA_computeErrorAndAppend(errors,  X,  gt_q, gt_p, gt_v, gt_bg, gt_ba);
+            
             
         end
         
@@ -278,9 +293,8 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
 
             q_S2G= Quater_mat2q(R_S2G);
             t_q_S2I = Quater_multi(t_q_G2I, q_S2G); %参考坐标系转换到{S}
-            
 
-            t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/0.0095); %
+            t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/init_lambda); %
             
             Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
             if updateFlag
