@@ -35,10 +35,6 @@ filtered_values= filtfilt(b, a, values);
 mainFrequency = Sig_getMainFrequency(values);  %尽量使用3d的信息，而不只是1d
 mainCycle = 1/mainFrequency; %周期
 
-
-
-
-
 [zero_pts , zero_pts_idx] = Sig_findZeroPoints(filtered_values);
 
 
@@ -85,7 +81,7 @@ tooth_dis = mainCycle*0.5; %取半个周期作为齿距
 threshold = 0.25;
 max_tooth_zero_pts_time = Sig_findLongestComb(zero_pts_idx_time, mainCycle*0.5, threshold);
 
-if PLOT
+if 0
     hold on;
     plot(max_tooth_zero_pts_time, 0, 'ro');
 end

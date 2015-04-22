@@ -1,6 +1,7 @@
 function z_ = SKF_Update_getEstimateZ(X, features, K, q_I2C)
 %{
 由状态X，得到当前的z
+没有 pic的版本
 %}
 nof_features = size(features, 1);
 

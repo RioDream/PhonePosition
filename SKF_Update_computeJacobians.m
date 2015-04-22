@@ -2,6 +2,7 @@ function J = SKF_Update_computeJacobians(X, features, K, q_I2C)
 %{
 Usage:
     计算jacobian
+没有 pic的版本
 %}
 
     nof_features = size(features, 1);

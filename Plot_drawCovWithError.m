@@ -183,17 +183,19 @@ title('p_IinC error cov');
 %% lambda 
 figure('Number', 'off');
 hold on;
-plot(stds(19,:), 'g');
+x = 1:length(errors);
 
 plot(errors(19, :), 'b.');
-
+ylim([-0.5,0.5]);
 plot(3*stds(19,:), 'b:');
 plot(-3*stds(19,:), 'b:');
 
-xlabel('IMU frame');
-ylabel('cov');
-title('lambda error cov');
-legend('lambda std', 'error', 'error');
+set(gca,'xtick',1:500:length(errors),'xticklabel',1:5:60) %xtick就是你要在哪些地方显示刻度，xticklabel就是显示什么
+
+xlabel('时间/秒');
+ylabel('误差');
+title('尺度因子误差变化');
+legend('尺度因子误差', '尺度因子方差的3std边界');
 
 
 

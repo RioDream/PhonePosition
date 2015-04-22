@@ -1,4 +1,13 @@
-function [X, P] = SKF_doIterEKFupdate(X, P, features, ms, K, q_I2C, im_sigma)
+function [X, P] = SKF_doIterEKFupdate(X, P, features, ms, K, q_I2C, im_sigma, R_S2G, p_GinS)
+%{
+Usage:
+    使用迭代卡尔曼滤波器
+
+    步骤：
+    1. 进行卡方检验，滤除不好的feature
+    2. 使用通过卡方检验的feature进行迭代更新
+%}
+
 
 MAX_ITER = 5;
 
@@ -15,25 +24,10 @@ nof_chisquare_fail  = 0;
 passed_features = [];
 passed_z = [];
 for i=1:nof_corres
-    zi = ms(i, :).';
-    %convert to f_inC
-    p_finG = features(i, :).';
-    p_finC = R_I2C * R_G2I * (p_finG - p_IinG) + p_IinC;
- 
-    %% 计算 Jacobian
-    Ji_h =  IN_getJh(p_finC, K);
-
-    Ji_theta = R_I2C * R_G2I * skew_symmetric(p_finG-p_IinG);
-    Ji_p = -R_I2C * R_G2I;
-    Ji_pic = eye(3);
-
-    %组合
-    Ji_f = [Ji_theta, Ji_p, zeros(3,3), zeros(3,3), zeros(3,3), Ji_pic];
-    Hi = Ji_h * Ji_f;
-        
-    %% 计算 \hat{z}
-    Zi = K * p_finC;
-    zi_ = Zi(1:2)/Zi(3);
+    p_finS_i = features(i,:).';
+    zi = ms(i, : ).';
+    
+    [Hi, zi_] = SKF_update_computeJacobianOfOneFeature(p_finS_i, X, K, q_I2C, R_S2G, p_GinS);
     ri = zi - zi_;
     
     
@@ -46,16 +40,24 @@ for i=1:nof_corres
     end
 end
 
-nof_passed_corres = size(passed_features,1);
-R = eye(2*nof_passed_corres)*im_sigma;
 
+
+nof_passed_corres = size(passed_features,1);
 if nof_chisquare_fail > 0 
     disp(['*卡方失败：', num2str(nof_chisquare_fail)]);
 end
+if nof_passed_corres==0
+    return;
+end
+R = eye(2*nof_passed_corres)*im_sigma^2;
+
+
+
+
 
 %
 X_0 = X;
-deltaX_0 = zeros(18,1);
+deltaX_0 = zeros(19,1);
 
 X_j = X_0;
 deltaX_j = deltaX_0;
@@ -63,30 +65,32 @@ deltaX_j = deltaX_0;
 j = 1;
 J_j_1 = 0; % J_{j-1}
 while 1
-
-    % get H by X_j
-    H_j = SKF_Update_computeJacobians(X_j, passed_features, K, q_I2C);
     
-    % get eta_j 
-    z_j_ = SKF_Update_getEstimateZ(X_j, passed_features, K, q_I2C);
+    %(1)由计算Jacobian和residual
+    [H_j, z_j_] = SKF_update_computeJacobianOfAllFeature(passed_features, ms, X_j, K, q_I2C, R_S2G, p_GinS);
     r_j = passed_z - z_j_;
+    
+    %(2)
     eta_j = r_j + H_j * deltaX_j;
     
     %(3) 计算 kalman gain
     S_j = H_j * P * transpose(H_j) + R;
+    S_j = MAKE_SYMMETRIC(S_j);
+    
     K_j = P * transpose(H_j) / S_j;
     
     %(4) correct X
     deltaX_j = K_j * eta_j;
-    X_j = IN_correctX(X, deltaX_j, 1);
+    X_j = SKF_update_correctX(X, deltaX_j);
 
     
     %evalute whether to break
-    deltax = IN_getDelta(X, X_j);
-    J_j = transpose(deltax) * inv(P) * deltax + transpose(r_j) * inv(R) * r_j;
+    %deltax = IN_getDelta(X, X_j);
+    %J_j = transpose(deltax) * inv(P) * deltax + transpose(r_j) * inv(R) * r_j;
+    
+    J_j = transpose(deltaX_j) * inv(P) * deltaX_j + transpose(r_j) * inv(R) * r_j;
     
 
-    
     disp(J_j);
     if J_j<max([0.01, 0.001*J_j_1]) || j>=MAX_ITER %不论如何，要保证退出的时候 X和P都是由Sj和Kj导出的
         X = X_j;
@@ -118,6 +122,7 @@ function deltax = IN_getDelta(X, X_j)
     
     deltaQ = Quater_multi( qj , Quater_conj(q));
     
+    %验证deltaQ是不是很小
     assert(abs(deltaQ(4)-1)<0.0001, num2str(deltaQ(4)) );
     
     theta = 2*deltaQ(1:3);
@@ -149,17 +154,12 @@ delta_v = deltaX(7:9);
 delta_bg = deltaX(10:12);
 delta_ba = deltaX(13:15);
 delta_pic = deltaX(16:18);
-
-if NO_LAMBDA
-    delta_lambda = 0;
-else
-    delta_lambda = deltaX(19);
-end
+delta_lambda = deltaX(19);
 
 %convert theta to deltaQ
 bq = 0.5*theta;
 if norm(bq)<1.0
-    deltaQ =  [bq; sqrt(1.0 - norm(bq))] ;
+    deltaQ =  [bq; sqrt(1.0 - bq.'*bq)] ;
 else
     deltaQ = [bq; 1];
     deltaQ = deltaQ/norm(deltaQ);

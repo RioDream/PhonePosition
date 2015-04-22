@@ -25,10 +25,11 @@ clear;
 close all;
 PLOT_ENV_configFigure;
 
-MAKE_LAMBDA_ONE_SCALE = 0.019062181447503;
+%1个visual单位对应18.7cm,即0.187/9.81=0.019.. ，这个scale*visual单位就可以得到真实的scale
+MAKE_LAMBDA_ONE_SCALE = 0.019062181447503; 
 
 PLOT_SCALE = 1;
-PLOT_ANIMATION = 1;
+PLOT_ANIMATION = 0;
 PLOT_PATTERN = 1;
 if PLOT_PATTERN
     scale = MAKE_LAMBDA_ONE_SCALE ;
@@ -48,7 +49,7 @@ USE_REAL_DATA = 1;
 RECORD_VALUES = 1;
 
 if USE_REAL_DATA
-    infoDir = '/Users/riodream/workspace/PhonePosition/SKF_data/2/';
+    infoDir = '/Users/riodream/workspace/PhonePosition/SKF_data/6/';
     [R_S2C, p_SinC] = Utils_loadInitRandT(infoDir);
     
     %{
@@ -64,9 +65,23 @@ if USE_REAL_DATA
     load([infoDir, 'frames.mat']);
     load([infoDir, 'room.mat']);
     
-    IMUdata(1).rateX = 0;
-    IMUdata(1).rateY = 0;
-    IMUdata(1).rateZ = 0;
+    IMUdata = IMUdata(1:3570);
+    
+    %fix ios bug, 检查一下，第一个gyro读数
+    %IMUdata(1).rateX = 0;
+    %IMUdata(1).rateY = 0;
+    %IMUdata(1).rateZ = 0;
+    
+    %{
+        消去第一针，因为第一针是初始状态
+        IMUdata.txt 的第一行 和 frame{1}都是同一个时刻
+        这两个都用来作为初始时候的状态，
+        IMUdata(1)要作为last状态
+        frames{1}也作为last状态
+        前推从第二个imudata开始
+    %}    
+    frames(1) = [];
+    
     
     room(:,1:3) = room(:,1:3)*MAKE_LAMBDA_ONE_SCALE ; %转换到g坐标，这样lambda为1
     p_SinC = p_SinC*MAKE_LAMBDA_ONE_SCALE ;
@@ -80,38 +95,49 @@ if USE_REAL_DATA
     q_I2C = [-1 0 0 0].';
     R_I2C = Quater_2Mat(q_I2C);
     %g_inG = R_I2C * [-0.015028, -0.639265, -0.768840].'; %1
-    g_inG = R_I2C * [0.010955,-0.781036,-0.624389].'; %2
+    %g_inG = R_I2C * [0.010955,-0.781036,-0.624389].'; %2
+    %g_inG = R_I2C * [-0.106837,-0.787572,-0.606891].'; %3
+    %g_inG  = R_I2C*[0.008877,-0.722622,-0.691186].'; %4
+    %g_inG = R_I2C *[0.005456,-0.944635,-0.328079].'; %5
+    g_inG = R_I2C *[0.037215,-0.867221,-0.496530].'; %6
+    
+    
     K = [582.14339,         0,        245.61315;
                 0,          587.28613 , 349.09467;
                 0 ,             0 ,              1 ];
-    
+            
     %初始化参数
+    init_pic = [0, 0.00656, 0].'; %0.003大约3厘米 0.006560825904960=6.436cm 0.004771509749062=4.6808
+    
     init_q = Quater_conj(q_I2C); %R_C2I
-    init_p = [0 0 0].'; % == init_pic
+    init_p = init_pic; % == init_pic
     init_v = [0, 0, 0].';
+    %init_bg = [-0.0094,-0.0186,-0.0544].';
+    %init_ba = [0.0397 0.1322 -0.1303].';
     init_bg = [0 0 0].';
     init_ba = [0 0 0].';
-    init_pic = [0, 0, 0].';
+    
     %1
     init_lambda = (0.135/9.81)/2; %2个单位对应 0.135m,0.135/9.81个g
     %2
     %init_lambda = (0.187/9.81)/1; %1个单位对应 0.187m,0.135/9.81个g
-    init_lambda = 1;
+    init_lambda = 0.95;
     
-    init_q_cov = 0.001;
-    init_p_cov = 0.005;
-    init_v_cov = 0.01;
-    init_bg_cov = 0.01;
-    init_ba_cov = 0.01;
-    init_pic_cov = 0.005;
-    init_lambda_cov = 0.0001;
+    init_q_cov = 0.1; %R_I2C
+    init_p_cov = 0.05; %pic 5mm
+    init_v_cov = 0.001;
+    init_bg_cov = 0.1*0.1;
+    init_ba_cov = 0.1*0.1;
+    init_pic_cov = 0.00000000000001;
+    init_lambda_cov = 0.03*0.03;
 
-    ratio = 5.0;
+    ratio = 3.0;
     sigma_gc = 0.001;
-    sigma_ac = 0.008 * ratio;
+    sigma_ac = 0.008;
+    ratio = 1.0
     sigma_wgc = 0.0001;
     sigma_wac = 0.0001;
-    im_sigma = 0.5;
+    im_sigma = 5;
     
 else
     %load data
@@ -144,8 +170,8 @@ else
     init_v = [0, 0, 0].';
     init_bg = [0 0 0].';
     init_ba = [0 0 0].';
-    init_pic = [0.001, 0.001, 0].';
-    init_lambda = 1.55;
+    init_pic = [0.0, 0.0, 0].';
+    init_lambda = 1.45;
 
 
     init_q_cov = 0.1;
@@ -153,15 +179,15 @@ else
     init_v_cov = 0.01;
     init_bg_cov = 0.01;
     init_ba_cov = 0.01;
-    init_pic_cov = 0.01;
-    init_lambda_cov = 0.03;
+    init_pic_cov = 0.0000000000001;
+    init_lambda_cov = 0.001;
 
     ratio = 1.0;
     sigma_gc = 0.001 * ratio;
     sigma_ac = 0.008 * 1;
     sigma_wgc = 1.00000000000000e-04;
     sigma_wac = 1.00000000000000e-04;
-    im_sigma = 1.1;
+    im_sigma = 0.3;
 end
 
     Nc = zeros(15,15);
@@ -177,13 +203,15 @@ X = [init_q; init_p; init_v; init_bg; init_ba; init_pic;init_lambda];
 %初始化协方差
 P = blkdiag(init_q_cov*eye(3), init_p_cov*eye(3), init_v_cov*eye(3), init_bg_cov*eye(3), init_ba_cov*eye(3), init_pic_cov*eye(3), init_lambda_cov);
 
-
+  [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
+        t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/init_lambda); %
+        
 %开始前的准备
 init_IMUInfo = IMUdata(1);
 last_IMUInfo = init_IMUInfo;
 
 last_firstEstimated_X = X;
-
+ps = [];
 Nof_frames = length(frames);
 Nof_IMU_frames = length(IMUdata);
 frame_idx = 1;
@@ -224,7 +252,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
     
         [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
         t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/init_lambda); %
-        Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
+        Plot_scalePlot(t_p_IinS, 'r.', PLOT_SCALE);
         
 
     if Debug_isNearlyEqual(IMU_timestamp, frame_timestamp) && ~DEBUG_ONLY_IMU 
@@ -247,7 +275,7 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         
         if USE_ITER_UPDATE
             %old_X= old_X(1:19);
-            [X, P ] = SKF_doIterEKFupdate(X, P, features, ms, K, q_I2C, im_sigma);
+            [X, P ] = SKF_doIterEKFupdate(X, P, features, ms, K, q_I2C, im_sigma,R_S2G, p_GinS);
         else
             %X(1:4) = gt_qs(:,IMU_idx-1) ;
             %X(5:7) = gt_ps(:,IMU_idx-1) ;
@@ -282,19 +310,26 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
             
         end
         
-        step = 5;
+
+        PLOT_SCALE = 1;
+        [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
+        [pic , lambda] = SKF_getOtherPart(X);
+
+        %pointHandle = pointHandles(1);
+        %set(pointHandle , 'Xdata', t_p(1))
+        %'Ydata', t_p(2), 'zdata', t_p(3));
+
+        q_S2G= Quater_mat2q(R_S2G);
+        t_q_S2I = Quater_multi(t_q_G2I, q_S2G); %参考坐标系转换到{S}
+
+        t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/lambda); %
+        
+        
+
+        ps = [ps, t_p_IinS];
+        
+        step = 20;
         if PLOT_ANIMATION && mod(IMU_idx,step)==0
-            PLOT_SCALE = 1;
-            [t_q_G2I, t_p_IinG,t_v, t_bias_G, t_bias_A ] = SKF_X_getIMUpart(X);
-            
-            %pointHandle = pointHandles(1);
-            %set(pointHandle , 'Xdata', t_p(1))
-            %'Ydata', t_p(2), 'zdata', t_p(3));
-
-            q_S2G= Quater_mat2q(R_S2G);
-            t_q_S2I = Quater_multi(t_q_G2I, q_S2G); %参考坐标系转换到{S}
-
-            t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/init_lambda); %
             
             Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
             if updateFlag
@@ -305,9 +340,10 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
 
             updateFlag = false;
         end
-        
-    
 end
+save('./EX_data/pIinSs.mat', 'ps');
+save('./EX_data/errors.mat', 'errors');
+save('./EX_data/covs.mat', 'covs');
 
 disp('----')
 

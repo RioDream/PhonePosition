@@ -17,14 +17,17 @@ mainFrequency = -1;
     m=length(y);
     f=(0:m/2-1)'*fs/m;%进行对应的频率转换
 
-    PLOT = 0;
+    PLOT = 1;
     if PLOT
-        figure;
+        figure(1);
         plot(f,mag(1:m/2));%做频谱图
         axis([0,10,0,100]);
         xlabel('频率(Hz)');
         ylabel('幅值');
         title('linPosHP 的频率谱');
+
+        
+        
 
         figure;
         plot(t,values);%作正弦信号的时域波形

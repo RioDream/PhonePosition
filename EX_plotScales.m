@@ -1,14 +1,26 @@
 function EX_plotScales(scales)
 
-trueVal = 0.135;
+
+%permute
+bad_idx= [9,10,11,12,14,15];
+bad_scales = scales(bad_idx);
+scales(bad_idx)= [];
+scales = [scales, bad_scales];
+
+trueVal = 1;
 errRatio = 0.05;
 
-scales = scales*2.0;
+scales = scales*1.0;
 nof_trials = length(scales);
 
 figure;
-plot(1:nof_trials, scales, 'o');
-ylim([0.08,0.18]);
+plot(1:10, scales(1:10), 'o');
+hold on;
+plot(11:16, scales(11:end), '*');
+ylim([0.6,1.3]);
+legend('运动周期性较显著的实验结果','运动周期性较弱的实验结果')
+xlabel('实验次数');
+ylabel('估计结果');
 hold on;
 
 trueLineX = 0:nof_trials;
