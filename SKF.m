@@ -65,7 +65,7 @@ if USE_REAL_DATA
     load([infoDir, 'frames.mat']);
     load([infoDir, 'room.mat']);
     
-    IMUdata = IMUdata(1:3570);
+    %IMUdata = IMUdata(1:3570); 
     
     %fix ios bug, 检查一下，第一个gyro读数
     %IMUdata(1).rateX = 0;
@@ -126,18 +126,32 @@ if USE_REAL_DATA
     init_q_cov = 0.1; %R_I2C
     init_p_cov = 0.05; %pic 5mm
     init_v_cov = 0.001;
-    init_bg_cov = 0.1*0.1;
-    init_ba_cov = 0.1*0.1;
+    init_bg_cov = 1*1;
+    init_ba_cov = 1*1;
     init_pic_cov = 0.00000000000001;
     init_lambda_cov = 0.03*0.03;
-
+    
+  
     ratio = 3.0;
     sigma_gc = 0.001;
     sigma_ac = 0.008;
-    ratio = 1.0
+    ratio = 1.0;
     sigma_wgc = 0.0001;
     sigma_wac = 0.0001;
+    im_sigma = 3;
+    
+    %=====fix it=====
+    init_lambda = 1;
+    init_lambda_cov = 0.0000000000000001;
     im_sigma = 5;
+    sigma_gc = 0.003;
+    sigma_ac = 0.05;
+    init_p_cov = 0.001*0.001; %pic 5mm
+    init_q_cov = 0.001*0.001;
+    IMUdata = IMUdata(1:300); 
+    init_pic = [0, 0.00656, 0].';
+    init_pic = [0, 0.0070, 0].';
+    init_p = init_pic; % == init_pic
     
 else
     %load data
@@ -212,10 +226,11 @@ last_IMUInfo = init_IMUInfo;
 
 last_firstEstimated_X = X;
 ps = [];
+Rs = {};
 Nof_frames = length(frames);
 Nof_IMU_frames = length(IMUdata);
 frame_idx = 1;
-IMU_idx = 2; %从第二个IMU帧开始, 第一个已经作为初始值了
+IMU_idx = 1; %从第二个IMU帧开始, 第一个已经作为初始值了
 
 
 lambdas = [];
@@ -224,7 +239,7 @@ errors = [];
 updateFlag = false;
 %Nof_IMU_frames = 1200;
 
-while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
+while IMU_idx < Nof_IMU_frames && frame_idx<Nof_frames
  
     IMUInfo = IMUdata(IMU_idx);
     frameInfo = frames{frame_idx};
@@ -256,6 +271,10 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         
 
     if Debug_isNearlyEqual(IMU_timestamp, frame_timestamp) && ~DEBUG_ONLY_IMU 
+        
+        
+
+        
         frameInfo = frames{frame_idx}; 
         disp( [' #', num2str(frame_idx),' @ ', num2str(frame_timestamp), ': use frame ', frameInfo.name ,' to update...']);
 
@@ -269,7 +288,6 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         
         %SKF_checkState(X, gt_qs(:,IMU_idx-1) ,gt_ps(:,IMU_idx-1))
         %SKF_check_corres(features, ms, dess, raw_room, frameInfo, gt_qs(:,IMU_idx-1) ,gt_ps(:,IMU_idx-1), K);
-        
     
         disp(['-feature number ', num2str(size(ms,1))]);
         
@@ -322,13 +340,14 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
         q_S2G= Quater_mat2q(R_S2G);
         t_q_S2I = Quater_multi(t_q_G2I, q_S2G); %参考坐标系转换到{S}
 
+        t_R_I2S = transpose( Quater_2Mat(t_q_S2I) );
         t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/lambda); %
         
-        
-
+        %p_IinSs
         ps = [ps, t_p_IinS];
+        Rs = [Rs, t_R_I2S];
         
-        step = 20;
+        step = 1;
         if PLOT_ANIMATION && mod(IMU_idx,step)==0
             
             Plot_scalePlot(t_p_IinS, 'ro', PLOT_SCALE);
@@ -337,11 +356,11 @@ while IMU_idx < Nof_IMU_frames || frame_idx<Nof_frames
             end
             
             quiverHandles = Plot_drawPose_useQuiverHandles(Quater_conj(t_q_S2I), PLOT_SCALE*t_p_IinS, 0, 0, 0, [], quiverHandles);
-
             updateFlag = false;
         end
 end
 save('./EX_data/pIinSs.mat', 'ps');
+save('./EX_data/R_I2Ss.mat', 'Rs');
 save('./EX_data/errors.mat', 'errors');
 save('./EX_data/covs.mat', 'covs');
 

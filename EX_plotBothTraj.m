@@ -9,6 +9,7 @@ close all;
 
 %% plot ekf traj
 ps_ = p_IinGs;
+plot(ps_(1:500,1));
 plot3(ps_(:,1), ps_(:,2), ps_(:,3), 'r-' , 'LineWidth',0.05)
 axis equal;
 hold on;
