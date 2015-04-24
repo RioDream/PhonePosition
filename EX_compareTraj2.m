@@ -38,9 +38,6 @@ load('./EX_data/pIinSs.mat');
 load('./EX_data/R_I2Ss.mat');
 R_I2C = Quater_2Mat([-1 0 0 0]);
 p_IinC = [0, 0.00656, 0].';
-p_IinC = [0, 0.0070, 0].';
-
-
 
 ps_ = ps(:,1:end);
 nof_ps = size(ps_, 2);

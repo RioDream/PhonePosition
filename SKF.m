@@ -131,26 +131,40 @@ if USE_REAL_DATA
     init_pic_cov = 0.00000000000001;
     init_lambda_cov = 0.03*0.03;
     
-  
     ratio = 3.0;
     sigma_gc = 0.001;
     sigma_ac = 0.008;
     ratio = 1.0;
-    sigma_wgc = 0.0001;
-    sigma_wac = 0.0001;
-    im_sigma = 3;
+   
+    im_sigma = 0.5;
     
+    
+    %0.1 - 0.008 \
+    %0.1 - 0.005 X
+    %0.3 - 0.005 X
+    %0.3 - 0.008 \
+    %0.5 - 0.005 X
+    %0.5 - 0.008 \
+
+    %0.95 0.05 0.1 0.06 - X %0.00002    
+    %0.95 0.03 1    0.06 0.00005 \-
+    %0.95 0.03 0.8    0.06 0.00005 \-
+
     %=====fix it=====
-    init_lambda = 1;
-    init_lambda_cov = 0.0000000000000001;
-    im_sigma = 5;
-    sigma_gc = 0.003;
-    sigma_ac = 0.05;
-    init_p_cov = 0.001*0.001; %pic 5mm
+    ratio = 1;
+    init_lambda = 0.95;
+    init_lambda_cov = 0.02^2;
+    im_sigma = 0.7*ratio;
+    sigma_ac = 0.006*ratio*1;
+    sigma_wgc = 0.00002*1;
+    sigma_wac = 0.00002*1;
+    sigma_gc = 0.0008*ratio*1;
+    
+    init_p_cov = 0.1^2; %pic 5mm
     init_q_cov = 0.001*0.001;
-    IMUdata = IMUdata(1:300); 
+    IMUdata = IMUdata(1:end); 
     init_pic = [0, 0.00656, 0].';
-    init_pic = [0, 0.0070, 0].';
+    init_pic_cov = 0.00000000000001;
     init_p = init_pic; % == init_pic
     
 else
@@ -227,6 +241,8 @@ last_IMUInfo = init_IMUInfo;
 last_firstEstimated_X = X;
 ps = [];
 Rs = {};
+frame_ps = []
+frame_Rs = {};
 Nof_frames = length(frames);
 Nof_IMU_frames = length(IMUdata);
 frame_idx = 1;
@@ -303,6 +319,9 @@ while IMU_idx < Nof_IMU_frames && frame_idx<Nof_frames
 
         updateFlag = true;
         frame_idx = frame_idx + 1; 
+        
+        
+        
     end
     
 
@@ -343,9 +362,19 @@ while IMU_idx < Nof_IMU_frames && frame_idx<Nof_frames
         t_R_I2S = transpose( Quater_2Mat(t_q_S2I) );
         t_p_IinS = (p_GinS + transpose(R_S2G)*t_p_IinG/lambda); %
         
+        
+        
         %p_IinSs
         ps = [ps, t_p_IinS];
         Rs = [Rs, t_R_I2S];
+        
+        if updateFlag
+           frame_ps =  [frame_ps, t_p_IinS];
+           frame_Rs = [frame_Rs, t_R_I2S];
+        end
+        
+        updateFlag = false;
+        
         
         step = 1;
         if PLOT_ANIMATION && mod(IMU_idx,step)==0
@@ -361,6 +390,8 @@ while IMU_idx < Nof_IMU_frames && frame_idx<Nof_frames
 end
 save('./EX_data/pIinSs.mat', 'ps');
 save('./EX_data/R_I2Ss.mat', 'Rs');
+save('./EX_data/frame_pIinSs.mat', 'frame_ps');
+save('./EX_data/frame_R_I2Ss.mat', 'frame_Rs');
 save('./EX_data/errors.mat', 'errors');
 save('./EX_data/covs.mat', 'covs');
 
